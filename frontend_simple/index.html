@@ -73,8 +73,8 @@
             const messagesEndRef = useRef(null);
 
             useEffect(() => {
-                // Connect to WebSocket (Port 8002 based on your environment)
-                const socket = new WebSocket("ws://localhost:8002/api/ws/chat");
+                // Connect to WebSocket (Port 8080 based on your environment)
+                const socket = new WebSocket("ws://127.0.0.1:8080/api/ws/chat");
 
                 socket.onopen = () => {
                     console.log("Connected to WebSocket");
@@ -128,8 +128,8 @@
                         {messages.map((msg, idx) => (
                             <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                                 <div className={`max-w-[80%] rounded-lg px-4 py-3 text-sm shadow-sm ${msg.role === 'user'
-                                        ? 'bg-primary text-primary-foreground'
-                                        : 'bg-secondary text-secondary-foreground'
+                                    ? 'bg-primary text-primary-foreground'
+                                    : 'bg-secondary text-secondary-foreground'
                                     }`}>
                                     {msg.content}
                                 </div>
