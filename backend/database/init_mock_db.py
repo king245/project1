@@ -412,8 +412,31 @@ def create_db():
     cursor.execute("INSERT INTO DIM_COUNTRY (COUNTRY_ID, COUNTRY, COUNTRY_SHORT_CD) VALUES ('US', 'United States', 'USA')")
     cursor.execute("INSERT INTO DIM_CALENDAR (CALENDAR_ID, YEAR, MONTH, QUARTER) VALUES ('202301', 2023, 1, 1)")
     cursor.execute("INSERT INTO DIM_PANEL (PANEL_ID, PANEL, COUNTRY) VALUES ('P1', 'Retail Panel', 'United States')")
-    cursor.execute("INSERT INTO DIM_SOURCE_PRODUCT (SOURCE_PRODUCT_ID, PRODUCT_BRAND, CATEGORY_NM) VALUES ('SP1', 'Advil', 'Pain Relief')")
-    cursor.execute("INSERT INTO FCT_SALES_NATIONAL_MTH (SOURCE_PRODUCT_ID, COUNTRY_ID, PANEL_ID, CALENDAR_ID, VALUE_LC, QTY_UNITS) VALUES ('SP1', 'US', 'P1', '202301', 1000.0, 500)")
+    # Insert Brands
+    brands = [
+        ('SP1', 'Allegra', 'Pain Relief'),
+        ('SP2', 'Advil', 'Pain Relief'),
+        ('SP3', 'Tylenol', 'Pain Relief'),
+        ('SP4', 'Zyrtec', 'Allergy'),
+        ('SP5', 'Claritin', 'Allergy'),
+        ('SP6', 'Doliprane', 'Pain Relief'),
+        ('SP7', 'Dulcoflex', 'Digestive Health')
+    ]
+    
+    cursor.executemany("INSERT INTO DIM_SOURCE_PRODUCT (SOURCE_PRODUCT_ID, PRODUCT_BRAND, CATEGORY_NM) VALUES (?, ?, ?)", brands)
+
+    # Insert Sales Data
+    sales_data = [
+        ('SP1', 'US', 'P1', '202301', 1000.0, 500),
+        ('SP2', 'US', 'P1', '202301', 1500.0, 750),
+        ('SP3', 'US', 'P1', '202301', 1200.0, 600),
+        ('SP4', 'US', 'P1', '202301', 900.0, 450),
+        ('SP5', 'US', 'P1', '202301', 1100.0, 550),
+        ('SP6', 'US', 'P1', '202301', 850.0, 400),
+        ('SP7', 'US', 'P1', '202301', 600.0, 300)
+    ]
+
+    cursor.executemany("INSERT INTO FCT_SALES_NATIONAL_MTH (SOURCE_PRODUCT_ID, COUNTRY_ID, PANEL_ID, CALENDAR_ID, VALUE_LC, QTY_UNITS) VALUES (?, ?, ?, ?, ?, ?)", sales_data)
     
     conn.commit()
     conn.close()

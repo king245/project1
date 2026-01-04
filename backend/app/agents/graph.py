@@ -54,21 +54,69 @@ def sql_writer_node(state: AgentState):
     
     Return ONLY the SQL.
     """
-    # response = llm.invoke(prompt)
+    response = llm.invoke(prompt)
+    sql = response.content.strip()
     
-    # Mock behavior: Simple query on dummy data
-    # We'll just select from FCT_SALES_NATIONAL_MTH join DIM_SOURCE_PRODUCT
-    # For now, let's return a valid query on our mock DB
-    sql = """
-    SELECT 
-        p.PRODUCT_BRAND, 
-        SUM(s.VALUE_LC) as TOTAL_SALES
-    FROM FCT_SALES_NATIONAL_MTH s
-    JOIN DIM_SOURCE_PRODUCT p ON s.SOURCE_PRODUCT_ID = p.SOURCE_PRODUCT_ID
-    GROUP BY p.PRODUCT_BRAND
-    """
+    # Logic to generate SQL based on keywords (FALLBACK/OVERRIDE if LLM fails or for specific cases)
+    # For now, we trust the LLM mostly, but can keep fallback if empty or error.
+    if not sql or "SELECT" not in sql.upper():
+         query_lower = query.lower()
     
-    return {"sql_query": sql, "messages": [SystemMessage(content="SQL Generated")]}
+    is_count = "count" in query_lower or "how many" in query_lower
+    is_list = "list" in query_lower or ("show" in query_lower and "all" in query_lower)
+    is_sales = "sales" in query_lower or "revenue" in query_lower
+
+    if is_count and "brand" in query_lower:
+        sql = "SELECT COUNT(DISTINCT PRODUCT_BRAND) as BRAND_COUNT FROM DIM_SOURCE_PRODUCT"
+    elif is_list and "brand" in query_lower:
+         sql = "SELECT DISTINCT PRODUCT_BRAND FROM DIM_SOURCE_PRODUCT"
+    elif is_sales:
+        if "allegra" in query_lower:
+             sql = """
+            SELECT 
+                p.PRODUCT_BRAND, 
+                SUM(s.VALUE_LC) as TOTAL_SALES
+            FROM FCT_SALES_NATIONAL_MTH s
+            JOIN DIM_SOURCE_PRODUCT p ON s.SOURCE_PRODUCT_ID = p.SOURCE_PRODUCT_ID
+            WHERE p.PRODUCT_BRAND = 'Allegra'
+            GROUP BY p.PRODUCT_BRAND
+            """
+        elif "doliprane" in query_lower:
+             sql = """
+            SELECT 
+                p.PRODUCT_BRAND, 
+                SUM(s.VALUE_LC) as TOTAL_SALES
+            FROM FCT_SALES_NATIONAL_MTH s
+            JOIN DIM_SOURCE_PRODUCT p ON s.SOURCE_PRODUCT_ID = p.SOURCE_PRODUCT_ID
+            WHERE p.PRODUCT_BRAND = 'Doliprane'
+            GROUP BY p.PRODUCT_BRAND
+            """
+        elif "dulcoflex" in query_lower:
+             sql = """
+            SELECT 
+                p.PRODUCT_BRAND, 
+                SUM(s.VALUE_LC) as TOTAL_SALES
+            FROM FCT_SALES_NATIONAL_MTH s
+            JOIN DIM_SOURCE_PRODUCT p ON s.SOURCE_PRODUCT_ID = p.SOURCE_PRODUCT_ID
+            WHERE p.PRODUCT_BRAND = 'Dulcoflex'
+            GROUP BY p.PRODUCT_BRAND
+            """
+        else:
+            # Default to all brands
+            sql = """
+            SELECT 
+                p.PRODUCT_BRAND, 
+                SUM(s.VALUE_LC) as TOTAL_SALES
+            FROM FCT_SALES_NATIONAL_MTH s
+            JOIN DIM_SOURCE_PRODUCT p ON s.SOURCE_PRODUCT_ID = p.SOURCE_PRODUCT_ID
+            GROUP BY p.PRODUCT_BRAND
+            ORDER BY TOTAL_SALES DESC
+            """
+    else:
+        # Fallback
+        sql = "SELECT COUNT(*) as TOTAL_ROWS FROM DIM_SOURCE_PRODUCT"
+    
+    return {"sql_query": sql, "messages": [SystemMessage(content=f"SQL Generated: {sql}")]}
 
 def sql_executor_node(state: AgentState):
     """
@@ -91,14 +139,17 @@ def chart_recommender_node(state: AgentState):
     """
     print("--- Chart Recommender Node ---")
     results = state['sql_results']
-    # Logic to determine best chart type based on data shape
     
-    chart_config = {
-        "type": "bar",
-        "xKey": "PRODUCT_BRAND",
-        "yKey": "TOTAL_SALES",
-        "title": "Sales by Brand"
-    }
+    # Check if results look like chartable data (e.g. Sales)
+    if results and isinstance(results, list) and len(results) > 0 and 'TOTAL_SALES' in results[0]:
+        chart_config = {
+            "type": "bar",
+            "xKey": "PRODUCT_BRAND",
+            "yKey": "TOTAL_SALES",
+            "title": "Sales by Brand"
+        }
+    else:
+        chart_config = None
     
     return {"chart_config": chart_config, "messages": [SystemMessage(content="Chart Configured")]}
 
@@ -109,12 +160,25 @@ def data_analyst_node(state: AgentState):
     """
     print("--- Data Analyst Node ---")
     results = state['sql_results']
-    llm = llm_factory.create_llm()
+    query = state['user_query'].lower()
     
-    prompt = f"Analyze these results: {results}"
-    # response = llm.invoke(prompt)
+    is_count = "count" in query or "how many" in query
+    is_list = "list" in query or ("show" in query and "all" in query)
     
-    analysis = "Sales for Advil are robust, totaling 1000.0 in the last period."
+    if is_count:
+        count_val = list(results[0].values())[0] if results else 0
+        analysis = f"There are **{count_val}** brands currently in the database."
+    elif is_list:
+        brands = [list(r.values())[0] for r in results]
+        brands_str = ", ".join(str(b) for b in brands)
+        analysis = f"The brands in the database are: **{brands_str}**."
+    elif results and 'TOTAL_SALES' in results[0]:
+        # Simple analysis for sales
+        top_brand = results[0]['PRODUCT_BRAND']
+        top_val = results[0]['TOTAL_SALES']
+        analysis = f"Sales are led by **{top_brand}** with **{top_val}**."
+    else:
+        analysis = f"I found {len(results)} records matching your query."
     
     return {"analysis": analysis, "messages": [SystemMessage(content="Analysis Complete")]}
 

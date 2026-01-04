@@ -47,7 +47,8 @@ async def websocket_endpoint(websocket: WebSocket):
             final_state = await app_graph.ainvoke(inputs)
             final_response = final_state.get("final_response")
             
-            await manager.broadcast(f"Final Response: {str(final_response)}")
+            import json
+            await manager.broadcast(f"Final Response: {json.dumps(final_response)}")
             
     except WebSocketDisconnect:
         manager.disconnect(websocket)

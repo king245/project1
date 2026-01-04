@@ -12,6 +12,16 @@ class LLMFactory:
         Defaults to AWS Bedrock, falls back to Mock/OpenAI if credentials missing.
         """
         
+        # Check for Anthropic API Key
+        anthropic_key = os.getenv("ANTHROPIC_API_KEY") or settings.ANTHROPIC_API_KEY
+        if anthropic_key and "mock" not in anthropic_key:
+            from langchain_anthropic import ChatAnthropic
+            return ChatAnthropic(
+                model=model_id,
+                api_key=anthropic_key,
+                temperature=0
+            )
+
         # Check for AWS Creds
         aws_key = os.getenv("AWS_ACCESS_KEY_ID") or settings.AWS_ACCESS_KEY_ID
         if aws_key and "mock" not in aws_key:

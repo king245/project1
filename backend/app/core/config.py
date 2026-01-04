@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     AWS_SECRET_ACCESS_KEY: str = "mock-aws-secret"
     AWS_REGION: str = "us-east-1"
     
+    # Anthropic API Key
+    ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "mock-ant-key")
+    
     class Config:
         case_sensitive = True
 
